@@ -36,7 +36,7 @@ app.post("/api/bulk-generate", async (req, res) => {  // Pastikan ada `/api/`
       const shortId = shortid.generate();
       const docRef = db.collection("links").doc(shortId);
       batch.set(docRef, { longUrl });
-      links.push(`https://your-app.vercel.app/${shortId}`);
+      links.push(`https://genlink-nu.vercel.app/${shortId}`);
     }
 
     await batch.commit();
