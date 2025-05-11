@@ -1,43 +1,42 @@
-// api/bulk-generate.js
-import { initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import shortid from 'shortid';
+import express from "express";
+import cors from "cors";
+import shortid from "shortid";
+import admin from "firebase-admin";
 
-const serviceAccount = JSON.parse(
-  process.env.SERVICE_ACCOUNT_KEY_JSON || '{}'  
-);
+const serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT_KEY_JSON);
 
-if (!initializeApp.length) {
-  initializeApp({
-    credential: cert(serviceAccount),
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
   });
 }
-const db = getFirestore();
+const db = admin.firestore();
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
-    return res.status(405).end('Method Not Allowed');
-  }
+const app = express();
+app.use(cors());
+app.use(express.json());
 
+app.post("/api/bulk-generate", async (req, res) => {
   const { longUrl, total } = req.body;
   const count = parseInt(total) || 100;
-  if (!longUrl || !/^https?:\/\/\S+$/i.test(longUrl)) {
-    return res.status(400).json({ error: 'URL tidak valid atau kosong' });
-  }
+  if (!longUrl) return res.status(400).json({ error: "longUrl wajib diisi" });
 
   try {
     const links = [];
     const batch = db.batch();
+
     for (let i = 0; i < count; i++) {
-      const id = shortid.generate();
-      const ref = db.collection('links').doc(id);
-      batch.set(ref, { longUrl });
-      links.push(`${req.headers['x-forwarded-proto']}://${req.headers.host}/${id}`);
+      const shortId = shortid.generate();
+      const docRef = db.collection("links").doc(shortId);
+      batch.set(docRef, { longUrl });
+      links.push(`https://onlbio.web.app/${shortId}`);
     }
+
     await batch.commit();
     res.status(200).json({ links });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  } catch (err) {
+    res.status(500).json({ error: "Gagal generate link", details: err.message });
   }
-}
+});
+
+export default app;
