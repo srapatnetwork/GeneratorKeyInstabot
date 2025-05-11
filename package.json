@@ -1,7 +1,10 @@
 {
   "name": "genlink-backend",
   "version": "1.0.0",
+  "type": "module",
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "firebase-admin": "^13.3.0",
     "shortid": "^2.2.17"
   }
