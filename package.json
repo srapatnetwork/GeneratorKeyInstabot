@@ -1,18 +1,14 @@
 {
-  "name": "linkgenerator",
+  "name": "genlink-backend",
   "version": "1.0.0",
-  "description": "Link generator backend dengan Express",
-  "main": "server.js",
+  "main": "api/index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node api/index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "cors": "^2.8.5",
     "express": "^5.1.0",
     "firebase-admin": "^13.3.0",
+    "cors": "^2.8.5",
     "shortid": "^2.2.17"
   }
 }
