@@ -22,7 +22,7 @@ function isValidUrl(url) {
 }
 
 // Endpoint: Generate banyak shortlink
-app.post("/bulk-generate", async (req, res) => {
+app.post("/api/bulk-generate", async (req, res) => {  // Pastikan ada `/api/`
   const { longUrl, total } = req.body;
   const count = parseInt(total) || 100;
   if (!longUrl) return res.status(400).json({ error: "longUrl wajib diisi" });
