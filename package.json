@@ -1,14 +1,8 @@
 {
   "name": "genlink-backend",
   "version": "1.0.0",
-  "main": "api/bulk-generate.js",
-  "scripts": {
-    "start": "node api/bulk-generate.js"
-  },
   "dependencies": {
-    "express": "^5.1.0",
     "firebase-admin": "^13.3.0",
-    "cors": "^2.8.5",
     "shortid": "^2.2.17"
   }
 }
