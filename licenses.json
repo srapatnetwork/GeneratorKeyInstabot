@@ -1,4 +1,7 @@
 [
-  { "key": "IG-1234-ABCD", "device_id": null },
-  { "key": "IG-5678-WXYZ", "device_id": null }
+  {
+    "key": "ABC123",
+    "device_id": "",
+    "expired_at": "2025-12-31T23:59:59.000Z"
+  }
 ]
