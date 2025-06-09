@@ -1,45 +1,34 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-
-/**
- * Vercel Serverless Function handler
- * Manual routing: via `vercel.json` or custom backend
- */
 export default async function handler(req, res) {
-  const { key, device_id } = req.query;
+  const { key } = req.query;
 
-  if (!key || !device_id) {
-    return res.status(400).json({ valid: false, message: 'Missing key or device_id' });
+  if (!key) {
+    return res.status(400).json({ valid: false, message: "License key diperlukan" });
   }
 
-  const LICENSES_PATH = path.join(process.cwd(), 'licenses.json');
-
   try {
-    const data = await fs.readFile(LICENSES_PATH, 'utf8');
-    const licenses = JSON.parse(data);
+    const resp = await fetch(`https://czajokwlkqwklzljszmh.supabase.co/rest/v1/license?key=eq.${key}`, {
+      headers: {
+        apikey: process.env.SUPABASE_KEY,
+        Authorization: `Bearer ${process.env.SUPABASE_KEY}`,
+      },
+    });
 
-    const idx = licenses.findIndex(l => l.key === key);
+    const data = await resp.json();
 
-    if (idx === -1) {
-      return res.status(403).json({ valid: false, message: 'Lisensi tidak ditemukan' });
+    if (!data.length) {
+      return res.status(404).json({ valid: false, message: "Lisensi tidak ditemukan" });
     }
 
-    const license = licenses[idx];
+    const lisensi = data[0];
+    const now = new Date();
+    const expired = new Date(lisensi.expired_at);
 
-    if (!license.device_id) {
-      licenses[idx].device_id = device_id;
-      await fs.writeFile(LICENSES_PATH, JSON.stringify(licenses, null, 2));
-      return res.status(200).json({ valid: true, message: 'Lisensi berhasil diikat ke device ini' });
+    if (expired < now) {
+      return res.status(403).json({ valid: false, message: "Lisensi telah kedaluwarsa" });
     }
 
-    if (license.device_id === device_id) {
-      return res.status(200).json({ valid: true, message: 'Lisensi valid' });
-    } else {
-      return res.status(403).json({ valid: false, message: 'Lisensi sudah digunakan di device lain' });
-    }
-
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ valid: false, message: 'Server error' });
+    return res.status(200).json({ valid: true, message: "Lisensi valid" });
+  } catch (e) {
+    return res.status(500).json({ valid: false, message: "Server error" });
   }
 }
