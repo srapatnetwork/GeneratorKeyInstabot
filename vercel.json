@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "api/validasi.js": {
-      "runtime": "nodejs18.x"
-    }
-  }
-}
