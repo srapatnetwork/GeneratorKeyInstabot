@@ -1,22 +1,27 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'
 
 export function middleware(req) {
-  const url = req.nextUrl.clone();
+  const basicAuth = req.headers.get('authorization')
+  const url = req.nextUrl
 
-  // Proteksi hanya halaman /generate
-  if (url.pathname === '/generate') {
-    const auth = req.headers.get('authorization');
-    const expected = 'Basic ' + Buffer.from('admin:' + process.env.ADMIN_PASSWORD).toString('base64');
-
-    if (auth !== expected) {
-      return new NextResponse('Unauthorized', {
+  if (url.pathname.startsWith('/generate')) {
+    if (!basicAuth) {
+      return new NextResponse('Auth Required', {
         status: 401,
-        headers: {
-          'WWW-Authenticate': 'Basic realm="Access to /generate", charset="UTF-8"',
-        },
-      });
+        headers: { 'WWW-Authenticate': 'Basic realm="Admin Area"' }
+      })
+    }
+
+    const authValue = basicAuth.split(' ')[1]
+    const [user, pwd] = atob(authValue).split(':')
+
+    if (
+      user !== process.env.ADMIN_USERNAME ||
+      pwd !== process.env.ADMIN_PASSWORD
+    ) {
+      return new NextResponse('Unauthorized', { status: 403 })
     }
   }
 
-  return NextResponse.next();
+  return NextResponse.next()
 }
