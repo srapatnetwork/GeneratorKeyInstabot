@@ -1,0 +1,307 @@
+<!-- 
+const SUPABASE_URL = "https://czajokwlkqwklzljszmh.supabase.co";
+const SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6YWpva3dsa3F3a2x6bGpzem1oIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTUwODIxNywiZXhwIjoyMDY1MDg0MjE3fQ.bRWbsPbRGdkpP7Z569yaLnFJWjJHnSkDLNwPm0lQvTo";
+-->
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>License Dashboard</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: #121212;
+      color: #eee;
+      padding: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    header h2 {
+      margin: 0;
+    }
+
+    .search-container {
+      display: flex;
+      flex-wrap: wrap; /* Supaya responsif jika layar kecil */
+      gap: 10px; 
+      align-items: center;
+      margin: 0px;
+      padding: 0;
+    }
+
+    .search-container input {
+      flex: 1; 
+      max-width: 200px;
+    }
+
+    .search-container button {
+      white-space: nowrap;
+      margin-bottom: 5px;
+    }
+
+
+    .btn {
+      background: #007BFF;
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      /* transition: background 0.3s ease; */
+    }
+
+    .btn:hover {
+      background: #0056b3;
+    }
+
+    input, select {
+      padding: 10px;
+      margin: 6px 6px 6px 0;
+      border: none;
+      border-radius: 6px;
+      background: #222;
+      color: rgb(255, 255, 255);
+      width: 180px;
+    }
+
+    input:focus {
+      outline: 2px solid #007BFF;
+    }
+
+    #controls {
+      margin-bottom: 20px;
+    }
+
+    #generatedKey {
+      margin-top: 10px;
+      color: #0f0;
+      font-weight: bold;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #444;
+    }
+
+    th {
+      background: #222;
+    }
+
+    tr:hover {
+      background-color: #1e1e1e;
+    }
+
+    .small-btn {
+      padding: 5px 10px;
+      font-size: 12px;
+      margin-right: 5px;
+      border-radius: 4px;
+      background: #444;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+
+    .small-btn:hover {
+      background: #666;
+    }
+
+    @media (max-width: 600px) {
+      input {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+
+      #controls {
+        display: flex;
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <script>
+    if (localStorage.getItem("isLoggedIn") !== "yes") {
+      window.location.href = "login.html";
+    }
+
+    function logout() {
+      localStorage.clear();
+      location.href = "login.html";
+    }
+  </script>
+</head>
+<body>
+
+  <header>
+    <h2>License Generator</h2>
+    <button class="btn" onclick="logout()">Logout</button>
+  </header>
+
+  <div id="controls">
+    <input type="text" id="username" placeholder="Nama user" />
+    <input type="number" id="days" placeholder="Jumlah hari aktif" />
+    <button class="btn" onclick="generateLicense()">Generate Key</button>
+    <div id="generatedKey"></div>
+  </div>
+
+  <div style="margin-top: 30px;">
+    <h3 id="userCount">USERS AKTIF: 0</h3>
+    <div class="search-container">
+      <input type="text" id="searchUser" placeholder="Cari nama user..." oninput="searchLicenses()" />
+      <button class="btn" onclick="loadLicenses()">Refresh</button>
+    </div>
+  </div>
+
+  <table id="licenseTable">
+    <thead>
+      <tr>
+        <th>Key</th>
+        <th>User</th>
+        <th>Device ID</th>
+        <th>Expire</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+const SUPABASE_URL = "https://czajokwlkqwklzljszmh.supabase.co";
+const SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6YWpva3dsa3F3a2x6bGpzem1oIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0OTUwODIxNywiZXhwIjoyMDY1MDg0MjE3fQ.bRWbsPbRGdkpP7Z569yaLnFJWjJHnSkDLNwPm0lQvTo";
+
+const headers = {
+  apikey: SUPABASE_API_KEY,
+  Authorization: `Bearer ${SUPABASE_API_KEY}`,
+  "Content-Type": "application/json"
+};
+
+function randomKey() {
+  return "KEY-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+}
+
+async function generateLicense() {
+  const user = document.getElementById("username").value.trim();
+  const days = parseInt(document.getElementById("days").value);
+
+  if (!user) return alert("Masukkan nama user.");
+  if (!Number.isInteger(days) || days <= 0) return alert("Jumlah hari harus angka positif.");
+
+  const expires_at = new Date(Date.now() + days * 86400000).toISOString();
+  const key = randomKey();
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/licenses`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ key, user, device_id: null, expires_at })
+    });
+
+    if (!res.ok) throw new Error("Gagal membuat license.");
+
+    document.getElementById("generatedKey").innerText = `Key: ${key}`;
+    loadLicenses();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function loadLicenses(searchTerm = "") {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/licenses?select=*`, { headers });
+    if (!res.ok) throw new Error("Gagal memuat data.");
+
+    const data = await res.json();
+    const tbody = document.querySelector("#licenseTable tbody");
+    tbody.innerHTML = "";
+
+    const filtered = searchTerm
+      ? data.filter(lic => lic.user?.toLowerCase().includes(searchTerm.toLowerCase()))
+      : data;
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5">Tidak ada data.</td></tr>`;
+      return;
+    }
+
+    for (const lic of filtered) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${lic.key}</td>
+        <td>${lic.user || "-"}</td>
+        <td>${lic.device_id || "-"}</td>
+        <td>${lic.expires_at ? new Date(lic.expires_at).toLocaleString("id-ID") : "-"}</td>
+        <td>
+          <button class="small-btn" onclick="revokeKey('${lic.key}')">Revoke</button>
+          <button class="small-btn" onclick="deleteKey('${lic.key}')">Hapus</button>
+        </td>`;
+      tbody.appendChild(row);
+    }
+    const uniqueUsers = new Set(filtered.map(lic => lic.user)).size;
+    document.getElementById("userCount").innerText = `USERS AKTIF: ${uniqueUsers}`;
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+function searchLicenses() {
+  const term = document.getElementById("searchUser").value.trim();
+  loadLicenses(term);
+}
+
+async function revokeKey(key) {
+  if (!confirm(`Revoke device untuk key: ${key}?`)) return;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/licenses?key=eq.${key}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ device_id: null })
+    });
+
+    if (!res.ok) throw new Error("Gagal revoke.");
+    alert("Berhasil di-revoke.");
+    loadLicenses();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function deleteKey(key) {
+  if (!confirm(`Hapus key: ${key}?`)) return;
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/licenses?key=eq.${key}`, {
+      method: "DELETE",
+      headers
+    });
+
+    if (!res.ok) throw new Error("Gagal hapus.");
+    alert("Key dihapus.");
+    loadLicenses();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+loadLicenses();
+</script>
+</body>
+</html>
