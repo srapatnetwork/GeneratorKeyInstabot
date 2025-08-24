@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>License Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0;font-family:"Segoe UI",sans-serif;background:#121212;color:#eee;padding:20px;}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;}
+    header h2{margin:0;}
+    .btn{background:#007BFF;color:#fff;border:none;padding:10px 14px;border-radius:6px;cursor:pointer;}
+    .btn:hover{background:#0056b3;}
+    input{padding:10px;margin:6px 6px 6px 0;border:none;border-radius:6px;background:#222;color:#fff;}
+    table{width:100%;margin-top:10px;border-collapse:collapse;}
+    th,td{padding:10px;border:1px solid #444;}
+    th{background:#222;}
+    tr:hover{background:#1e1e1e;}
+    .small-btn{padding:5px 10px;font-size:12px;margin-right:5px;border-radius:4px;background:#444;color:#fff;border:none;cursor:pointer;}
+    .small-btn:hover{background:#666;}
+  </style>
+  <script>
+    if(localStorage.getItem("isLoggedIn")!=="yes")window.location.href="login.html";
+    function logout(){localStorage.clear();location.href="login.html";}
+  </script>
+</head>
+<body>
+<header>
+  <h2>License Generator</h2>
+  <button class="btn" onclick="logout()">Logout</button>
+</header>
+
+<div id="controls">
+  <input type="text" id="username" placeholder="Nama user" />
+  <input type="number" id="days" placeholder="Jumlah hari aktif" />
+  <button class="btn" onclick="generateLicense()">Generate Key</button>
+  <div id="generatedKey"></div>
+</div>
+
+<div style="margin-top: 30px;">
+  <h3 id="userCount">USERS AKTIF: 0</h3>
+  <div class="search-container">
+    <input type="text" id="searchUser" placeholder="Cari nama user..." oninput="searchLicenses()" />
+    <button class="btn" onclick="loadLicenses()">Refresh</button>
+  </div>
+</div>
+
+<table id="licenseTable">
+  <thead>
+    <tr>
+      <th>Key</th>
+      <th>User</th>
+      <th>Device ID</th>
+      <th>Expire</th>
+      <th>Aksi</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc } 
+    from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+      apiKey: "AIzaSyBv2eQKGlmtmL4UGe01yPVTZKtGfIRZSvo",
+      authDomain: "igbot-db.firebaseapp.com",
+      projectId: "igbot-db",
+      storageBucket: "igbot-db.firebasestorage.app",
+      messagingSenderId: "488295846389",
+      appId: "1:488295846389:web:789bb1c56de6b2478fd0bc"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  function randomKey() {
+    return "KEY-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+  }
+
+  window.generateLicense = async function() {
+    const user = document.getElementById("username").value.trim();
+    const days = parseInt(document.getElementById("days").value);
+    if (!user) return alert("Masukkan nama user.");
+    if (!Number.isInteger(days) || days <= 0) return alert("Jumlah hari harus angka positif.");
+    const expires_at = new Date(Date.now() + days * 86400000);
+    const key = randomKey();
+
+    try {
+      await addDoc(collection(db, "licenses"), {
+        key, user, device_id: null, expires_at
+      });
+      document.getElementById("generatedKey").innerText = `Key: ${key}`;
+      loadLicenses();
+    } catch (err) { alert("Gagal membuat lisensi: " + err.message); }
+  };
+
+  window.loadLicenses = async function(searchTerm = "") {
+    try {
+      const querySnapshot = await getDocs(collection(db, "licenses"));
+      const tbody = document.querySelector("#licenseTable tbody");
+      tbody.innerHTML = "";
+      let data = [];
+      querySnapshot.forEach(docSnap => data.push({ id: docSnap.id, ...docSnap.data() }));
+
+      const filtered = searchTerm
+        ? data.filter(l => l.user?.toLowerCase().includes(searchTerm.toLowerCase()))
+        : data;
+
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="5">Tidak ada data.</td></tr>`;
+        return;
+      }
+
+      for (const lic of filtered) {
+        const expire = lic.expires_at?.seconds
+          ? new Date(lic.expires_at.seconds * 1000).toLocaleString("id-ID")
+          : "-";
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${lic.key}</td>
+          <td>${lic.user || "-"}</td>
+          <td>${lic.device_id || "-"}</td>
+          <td>${expire}</td>
+          <td>
+            <button class="small-btn" onclick="revokeKey('${lic.id}')">Revoke</button>
+            <button class="small-btn" onclick="deleteKey('${lic.id}')">Hapus</button>
+          </td>`;
+        tbody.appendChild(row);
+      }
+      document.getElementById("userCount").innerText = `USERS AKTIF: ${new Set(filtered.map(l => l.user)).size}`;
+    } catch (err) { alert("Gagal memuat data: " + err.message); }
+  };
+
+  window.revokeKey = async function(id) {
+    if (!confirm("Revoke device ID?")) return;
+    try {
+      await updateDoc(doc(db, "licenses", id), { device_id: null });
+      alert("Device ID dihapus.");
+      loadLicenses();
+    } catch (err) { alert(err.message); }
+  };
+
+  window.deleteKey = async function(id) {
+    if (!confirm("Hapus lisensi?")) return;
+    try {
+      await deleteDoc(doc(db, "licenses", id));
+      alert("Lisensi dihapus.");
+      loadLicenses();
+    } catch (err) { alert(err.message); }
+  };
+
+  function searchLicenses() {
+    const term = document.getElementById("searchUser").value.trim();
+    loadLicenses(term);
+  }
+
+  loadLicenses();
+</script>
+</body>
+</html>
